@@ -1,0 +1,11 @@
+Debug/
+ipch/
+x64/
+MyServer.sdf
+MyServer.VC.db
+MyServer/Debug/
+MyServer/x64/
+.vs/
+MyServer/MyServer.aps
+
+
