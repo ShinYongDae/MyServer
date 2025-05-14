@@ -3,9 +3,11 @@
 #include <thread>
 #include <WinSock2.h>
 
-
+#define WM_CLIENT_CLOSED	(WM_USER + 0x73FC)	// 0x7FFC (Range of WM_USER is 0x400 ~ 0x7FFF)
+#define WM_SERVER_ACCEPT	(WM_USER + 0x73FD)	// 0x7FFD (Range of WM_USER is 0x400 ~ 0x7FFF)
 #define WM_CLIENT_RECEIVED	(WM_USER + 0x73FE)	// 0x7FFE (Range of WM_USER is 0x400 ~ 0x7FFF)
 #define WM_SERVER_RECEIVED	(WM_USER + 0x73FF)	// 0x7FFF (Range of WM_USER is 0x400 ~ 0x7FFF)
+
 #define BUFSIZE 16384
 
 // CSimpleClient
@@ -35,8 +37,10 @@ public:
 
 	SOCKET Socket;
 
-	static void funcReceive(const LPVOID lpContext);
+	static void thrdReceive(const LPVOID lpContext);
 	BOOL Send(CString sSend);
+
+protected:
 	BOOL IsAliveThread();
 	void EndThread();
 	BOOL Receive();

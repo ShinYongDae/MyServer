@@ -32,16 +32,19 @@ public:
 	char* m_pReadBuffer;
 	SOCKET listenSocket;
 
-	static void funcReceive(const LPVOID lpContext);
-	BOOL IsAliveThread();
+	static void thrdReceive(const LPVOID lpContext);
 	BOOL Send(int nClientID, CString sSend);
-	void EndThread();
-	BOOL Receive();
-
 	BOOL IsConnected(int nClientID);
 
+	afx_msg LRESULT wmServerAccept(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT wmClientReceived(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT wmClientClosed(WPARAM wParam, LPARAM lParam);
+
+protected:
+	void EndThread();
+	BOOL Receive();
+	BOOL IsAliveThread();
+
 protected:
 	DECLARE_MESSAGE_MAP()
 };

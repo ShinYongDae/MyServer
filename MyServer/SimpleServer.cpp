@@ -63,6 +63,13 @@ CSimpleServer::CSimpleServer(CString sServerIp, int nPort, CWnd* pParent/*=NULL*
 		return;
 	}
 
+	if (!Create(NULL, _T("Server"), WS_CHILD, CRect(0, 0, 0, 0), m_pParent, (UINT)this))
+	{
+		AfxMessageBox(_T("CSimpleServer::Create() Failed!!!"));
+		return;
+	}
+	//CWnd *pP = (CWnd*)::GetParent(this->m_hWnd);
+
 	StartThread();
 	//printf("[TCP %s : %d]  %s\n", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port), buf);
 }
@@ -91,12 +98,33 @@ CSimpleServer::~CSimpleServer()
 
 
 BEGIN_MESSAGE_MAP(CSimpleServer, CWnd)
+	ON_MESSAGE(WM_SERVER_ACCEPT, wmServerAccept)
+	ON_MESSAGE(WM_CLIENT_CLOSED, wmClientClosed)
 	ON_MESSAGE(WM_CLIENT_RECEIVED, wmClientReceived)
 END_MESSAGE_MAP()
 
 
 
 // CSimpleServer 메시지 처리기입니다.
+
+LRESULT CSimpleServer::wmServerAccept(WPARAM wParam, LPARAM lParam)
+{
+	SOCKET clientSocket = (SOCKET)wParam;
+	SOCKADDR* pclientAddr = (SOCKADDR*)lParam;
+	SOCKADDR_IN* ppclientAddr = (SOCKADDR_IN*)pclientAddr;
+
+	for (int i = 0; i < MAX_CLIENT; i++)
+	{
+		if (!m_pClientAddr[i])
+		{
+			m_nConnectedID = i;
+			m_pClientAddr[m_nConnectedID] = new CSimpleClient(clientSocket, *ppclientAddr, m_nConnectedID, this);
+			break;
+		}
+	}
+
+	return (LRESULT)1;
+}
 
 LRESULT CSimpleServer::wmClientReceived(WPARAM wParam, LPARAM lParam)
 {
@@ -114,6 +142,7 @@ LRESULT CSimpleServer::wmClientClosed(WPARAM wParam, LPARAM lParam)
 
 	if (m_pClientAddr[nClientID])
 	{
+		delete m_pClientAddr[nClientID];
 		m_pClientAddr[nClientID] = NULL;
 	}
 
@@ -134,10 +163,10 @@ void CSimpleServer::StartThread()
 {
 	m_bEndThreadState = FALSE;
 	m_bAliveThread = TRUE;
-	t1 = std::thread(funcReceive, this);
+	t1 = std::thread(thrdReceive, this);
 }
 
-void CSimpleServer::funcReceive(const LPVOID lpContext)
+void CSimpleServer::thrdReceive(const LPVOID lpContext)
 {
 	CSimpleServer* pSimpleServer = reinterpret_cast<CSimpleServer*>(lpContext);
 
@@ -155,6 +184,7 @@ BOOL CSimpleServer::Receive()
 	//접속
 	SOCKET clientSocket;
 	SOCKADDR_IN clientAddr;
+	//SOCKADDR clientAddr;
 	int nlength = sizeof(clientAddr);
 	char buf[BUFSIZE];
 
@@ -167,6 +197,9 @@ BOOL CSimpleServer::Receive()
 	}
 	else
 	{
+		//HWND hWnd = this->GetSafeHwnd();
+		//::SendMessage(hWnd, WM_SERVER_ACCEPT, (WPARAM)clientSocket, (LPARAM)&clientAddr);
+
 		for (int i = 0; i < MAX_CLIENT; i++)
 		{
 			if (!m_pClientAddr[i])

@@ -13,14 +13,21 @@ IMPLEMENT_DYNAMIC(CSimpleClient, CWnd)
 
 CSimpleClient::CSimpleClient(SOCKET clientSocket, SOCKADDR_IN clientAddr, int nConnectedID, CWnd* pParent/*=NULL*/)
 {
-	//m_hParentWnd = ((CSimpleServer*)pParent)->GetSafeHwnd();
-
-	m_pParent = pParent;
+	m_hParentWnd = ((CSimpleServer*)pParent)->GetSafeHwnd();
+	m_pParent = (CSimpleServer*)pParent;
 	Socket = clientSocket;
 	m_ClientIP = clientAddr;
 	m_nClientID = nConnectedID;
 
 	m_pReceiveBuffer = new char[BUFSIZE]; // 1mb
+
+	//if (!Create(NULL, _T("Client"), WS_CHILD, CRect(0, 0, 0, 0), m_pParent, (UINT)this))
+	//{
+	//	AfxMessageBox(_T("CSimpleClient::Create() Failed!!!"));
+	//	return;
+	//}
+
+	//HWND hwnd = this->GetSafeHwnd();
 
 	StartThread();
 	//printf("[TCP %s : %d]  %s\n", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port), buf);
@@ -69,10 +76,10 @@ void CSimpleClient::StartThread()
 {
 	m_bEndThreadState = FALSE;
 	m_bAliveThread = TRUE;
-	t1 = std::thread(funcReceive, this);
+	t1 = std::thread(thrdReceive, this);
 }
 
-void CSimpleClient::funcReceive(const LPVOID lpContext)
+void CSimpleClient::thrdReceive(const LPVOID lpContext)
 {
 	CSimpleClient* pSimpleClient = reinterpret_cast<CSimpleClient*>(lpContext);
 
@@ -95,10 +102,10 @@ BOOL CSimpleClient::Receive()
 		memcpy(m_pReceiveBuffer, buffer, nRecSize);
 		m_pReceiveBuffer[nRecSize] = _T('\0');
 		CString sMsg = CharToString(m_pReceiveBuffer);
-		//::SendMessage(m_hParentWnd, WM_CLIENT_RECEIVED, (WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
-		if (m_pParent)
-			((CSimpleServer*)m_pParent)->wmClientReceived((WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
-			//((CSimpleServer*)m_pParent)->SendMessage(WM_CLIENT_RECEIVED, (WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
+		::SendMessage(m_hParentWnd, WM_CLIENT_RECEIVED, (WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
+		//if (m_pParent)
+		//	((CSimpleServer*)m_pParent)->wmClientReceived((WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
+		//	//((CSimpleServer*)m_pParent)->SendMessage(WM_CLIENT_RECEIVED, (WPARAM)m_nClientID, (LPARAM)(LPCTSTR)sMsg);
 	}
 	else if (nRecSize == 0)
 	{
@@ -135,7 +142,8 @@ void CSimpleClient::StopThread()
 void CSimpleClient::EndThread()
 {
 	m_bEndThreadState = TRUE;
-	((CSimpleServer*)m_pParent)->wmClientClosed((WPARAM)m_nClientID, (LPARAM)0);
+	::PostMessage(m_hParentWnd, WM_CLIENT_CLOSED, (WPARAM)m_nClientID, (LPARAM)0);
+	//((CSimpleServer*)m_pParent)->wmClientClosed((WPARAM)m_nClientID, (LPARAM)0);
 }
 
 BOOL CSimpleClient::IsAliveThread()
