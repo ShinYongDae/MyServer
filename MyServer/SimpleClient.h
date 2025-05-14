@@ -27,6 +27,7 @@ class CSimpleClient : public CWnd
 	void StringToTChar(CString str, TCHAR* tszStr);
 	CString CharToString(char *szStr);
 	void StartThread();
+	void StopThread();
 
 public:
 	CSimpleClient(SOCKET clientSocket, SOCKADDR_IN clientAddr, int nConnectedID, CWnd* pParent = NULL);
@@ -37,7 +38,6 @@ public:
 	static void funcReceive(const LPVOID lpContext);
 	BOOL Send(CString sSend);
 	BOOL IsAliveThread();
-	void StopThread();
 	void EndThread();
 	BOOL Receive();
 

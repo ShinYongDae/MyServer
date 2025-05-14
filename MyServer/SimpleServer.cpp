@@ -58,6 +58,7 @@ CSimpleServer::CSimpleServer(CString sServerIp, int nPort, CWnd* pParent/*=NULL*
 	recval = listen(listenSocket, SOMAXCONN);
 	if (recval == SOCKET_ERROR)
 	{
+		closesocket(listenSocket);
 		AfxMessageBox(_T("listen() Error"));
 		return;
 	}

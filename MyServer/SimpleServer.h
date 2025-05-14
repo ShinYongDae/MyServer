@@ -22,6 +22,7 @@ class CSimpleServer : public CWnd
 	void StringToTChar(CString str, TCHAR* tszStr);
 	CString CharToString(char *szStr);
 	void StartThread();
+	void StopThread();
 
 public:
 	CSimpleServer(CString sServerIp, int nPort, CWnd* pParent = NULL);
@@ -34,7 +35,6 @@ public:
 	static void funcReceive(const LPVOID lpContext);
 	BOOL IsAliveThread();
 	BOOL Send(int nClientID, CString sSend);
-	void StopThread();
 	void EndThread();
 	BOOL Receive();
 
