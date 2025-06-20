@@ -12,6 +12,7 @@ IMPLEMENT_DYNAMIC(CSimpleServer, CWnd)
 
 CSimpleServer::CSimpleServer(CString sServerIp, int nPort, CWnd* pParent/*=NULL*/)
 {
+	m_hParent = NULL;
 	m_pParent = pParent;
 	m_nConnectedID = -1;
 
@@ -63,14 +64,11 @@ CSimpleServer::CSimpleServer(CString sServerIp, int nPort, CWnd* pParent/*=NULL*
 		return;
 	}
 
-	if (!Create(NULL, _T("Server"), WS_CHILD, CRect(0, 0, 0, 0), m_pParent, (UINT)this))
-	{
-		AfxMessageBox(_T("CSimpleServer::Create() Failed!!!"));
-		return;
-	}
+	CreateWndForm(WS_CHILD | WS_OVERLAPPED);
+
 	//CWnd *pP = (CWnd*)::GetParent(this->m_hWnd);
 
-	StartThread();
+	ThreadStart();
 	//printf("[TCP %s : %d]  %s\n", inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port), buf);
 }
 
@@ -89,7 +87,7 @@ CSimpleServer::~CSimpleServer()
 	shutdown(listenSocket, SD_BOTH);
 	closesocket(listenSocket);			// accept() 상태를 벗어남.
 
-	StopThread();
+	ThreadStop();
 	Sleep(30);
 	t1.join();
 
@@ -106,6 +104,18 @@ END_MESSAGE_MAP()
 
 
 // CSimpleServer 메시지 처리기입니다.
+BOOL CSimpleServer::CreateWndForm(DWORD dwStyle)
+{
+	if (!Create(NULL, _T("SimpleServer"), dwStyle, CRect(0, 0, 0, 0), m_pParent, (UINT)this))
+	{
+		AfxMessageBox(_T("CSimpleServer::Create() Failed!!!"));
+		return FALSE;
+	}
+
+	//CWnd::Attach(hWnd)		// CWnd객체의 m_hWnd값에 hWnd값을 넣어준다 (Detach() : CWnd에 연결된 hWnd를 끊어버리는 것)
+	//CWnd::DestroyWindow()		// CWnd 자체를 파괴하는 것이 아니고, CWnd가 멤버 변수로 갖고 있는 윈도우라는 실체를 파괴하는 것
+	return TRUE;
+}
 
 LRESULT CSimpleServer::wmServerAccept(WPARAM wParam, LPARAM lParam)
 {
@@ -159,32 +169,32 @@ BOOL CSimpleServer::Send(int nClientID, CString sSend)
 }
 
 
-void CSimpleServer::StartThread()
+void CSimpleServer::ThreadStart()
 {
-	m_bEndThreadState = FALSE;
-	m_bAliveThread = TRUE;
-	t1 = std::thread(thrdReceive, this);
+	m_bThreadStateEnd = FALSE;
+	m_bThreadAlive = TRUE;
+	t1 = std::thread(ProcThrd, this);
 }
 
-void CSimpleServer::thrdReceive(const LPVOID lpContext)
+void CSimpleServer::ProcThrd(const LPVOID lpContext)
 {
 	CSimpleServer* pSimpleServer = reinterpret_cast<CSimpleServer*>(lpContext);
 
-	while (pSimpleServer->IsAliveThread())
+	while (pSimpleServer->ThreadIsAlive())
 	{
-		if (!pSimpleServer->Receive())
+		if (!pSimpleServer->ProcReceive())
 			break;
 	}
 
-	pSimpleServer->EndThread();
+	pSimpleServer->ThreadEnd();
 }
 
-BOOL CSimpleServer::Receive()
+BOOL CSimpleServer::ProcReceive()
 {
 	//접속
 	SOCKET clientSocket;
-	SOCKADDR_IN clientAddr;
-	//SOCKADDR clientAddr;
+	//SOCKADDR_IN clientAddr;
+	SOCKADDR clientAddr;
 	int nlength = sizeof(clientAddr);
 	char buf[BUFSIZE];
 
@@ -192,46 +202,46 @@ BOOL CSimpleServer::Receive()
 	if (clientSocket == INVALID_SOCKET)
 	{
 		//AfxMessageBox(_T("accept() Error"));
-		if (!m_bAliveThread)
+		if (!m_bThreadAlive)
 			return FALSE;
 	}
 	else
 	{
-		//HWND hWnd = this->GetSafeHwnd();
-		//::SendMessage(hWnd, WM_SERVER_ACCEPT, (WPARAM)clientSocket, (LPARAM)&clientAddr);
+		HWND hWnd = this->GetSafeHwnd();
+		::SendMessage(hWnd, WM_SERVER_ACCEPT, (WPARAM)clientSocket, (LPARAM)&clientAddr);
 
-		for (int i = 0; i < MAX_CLIENT; i++)
-		{
-			if (!m_pClientAddr[i])
-			{
-				m_nConnectedID = i;
-				m_pClientAddr[m_nConnectedID] = new CSimpleClient(clientSocket, clientAddr, m_nConnectedID, this);
-				break;
-			}
-		}
+		//for (int i = 0; i < MAX_CLIENT; i++)
+		//{
+		//	if (!m_pClientAddr[i])
+		//	{
+		//		m_nConnectedID = i;
+		//		m_pClientAddr[m_nConnectedID] = new CSimpleClient(clientSocket, clientAddr, m_nConnectedID, this);
+		//		break;
+		//	}
+		//}
 	}
 
 	return TRUE;
 }
 
-BOOL CSimpleServer::IsAliveThread()
+BOOL CSimpleServer::ThreadIsAlive()
 {
-	return m_bAliveThread;
+	return m_bThreadAlive;
 }
 
-void CSimpleServer::EndThread()
+void CSimpleServer::ThreadEnd()
 {
-	m_bEndThreadState = TRUE;
+	m_bThreadStateEnd = TRUE;
 }
 
-void CSimpleServer::StopThread()
+void CSimpleServer::ThreadStop()
 {
-	m_bAliveThread = FALSE;
+	m_bThreadAlive = FALSE;
 	MSG message;
 	const DWORD dwTimeOut = 1000 * 60 * 3; // 3 Minute
 	DWORD dwStartTick = GetTickCount();
 	Sleep(30);
-	while (!m_bEndThreadState)
+	while (!m_bThreadStateEnd)
 	{
 		if (GetTickCount() >= (dwStartTick + dwTimeOut))
 		{

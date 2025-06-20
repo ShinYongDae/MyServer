@@ -17,19 +17,21 @@ class CSimpleClient : public CWnd
 	DECLARE_DYNAMIC(CSimpleClient)
 
 	CWnd* m_pParent;
-	HWND m_hParentWnd;
+	HWND m_hParent;
 	SOCKADDR_IN m_ClientIP;
 	int m_nClientID;
 
 	char* m_pReceiveBuffer;
-	BOOL m_bAliveThread, m_bEndThreadState;
+	BOOL m_bThreadAlive, m_bThreadStateEnd;
 	std::thread t1;
+
+	BOOL CreateWndForm(DWORD dwStyle);
 
 	void StringToChar(CString str, char* szStr);
 	void StringToTChar(CString str, TCHAR* tszStr);
 	CString CharToString(char *szStr);
-	void StartThread();
-	void StopThread();
+	void ThreadStart();
+	void ThreadStop();
 
 public:
 	CSimpleClient(SOCKET clientSocket, SOCKADDR_IN clientAddr, int nConnectedID, CWnd* pParent = NULL);
@@ -37,13 +39,13 @@ public:
 
 	SOCKET Socket;
 
-	static void thrdReceive(const LPVOID lpContext);
+	static void ProcThrd(const LPVOID lpContext);
 	BOOL Send(CString sSend);
 
 protected:
-	BOOL IsAliveThread();
-	void EndThread();
-	BOOL Receive();
+	BOOL ThreadIsAlive();
+	void ThreadEnd();
+	BOOL ProcReceive();
 
 protected:
 	DECLARE_MESSAGE_MAP()

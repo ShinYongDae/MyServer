@@ -12,27 +12,29 @@ class CSimpleServer : public CWnd
 	DECLARE_DYNAMIC(CSimpleServer)
 
 	CWnd* m_pParent;
-	BOOL m_bAliveThread, m_bEndThreadState;
+	HWND m_hParent;
+	BOOL m_bThreadAlive, m_bThreadStateEnd;
 	std::thread t1;
 
 	CSimpleClient* m_pClientAddr[MAX_CLIENT]; // Number of Max connection is 10...
 	int m_nConnectedID;
 
+	BOOL CreateWndForm(DWORD dwStyle);
+
 	void StringToChar(CString str, char* szStr);
 	void StringToTChar(CString str, TCHAR* tszStr);
 	CString CharToString(char *szStr);
-	void StartThread();
-	void StopThread();
+	void ThreadStart();
+	void ThreadStop();
 
 public:
 	CSimpleServer(CString sServerIp, int nPort, CWnd* pParent = NULL);
 	virtual ~CSimpleServer();
 
-	HWND m_hParentWnd;
 	char* m_pReadBuffer;
 	SOCKET listenSocket;
 
-	static void thrdReceive(const LPVOID lpContext);
+	static void ProcThrd(const LPVOID lpContext);
 	BOOL Send(int nClientID, CString sSend);
 	BOOL IsConnected(int nClientID);
 
@@ -41,9 +43,9 @@ public:
 	afx_msg LRESULT wmClientClosed(WPARAM wParam, LPARAM lParam);
 
 protected:
-	void EndThread();
-	BOOL Receive();
-	BOOL IsAliveThread();
+	void ThreadEnd();
+	BOOL ProcReceive();
+	BOOL ThreadIsAlive();
 
 protected:
 	DECLARE_MESSAGE_MAP()
